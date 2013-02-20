@@ -18,7 +18,7 @@ namespace SentenceToDocument
 
         public const string DATEPATT = @"hh:mm:ss";
 
-        private const bool REBUILDNAMES = false;
+        private const bool REBUILDNAMES = true;
 
         static void BuildDocumentNames()
         {
@@ -46,6 +46,53 @@ namespace SentenceToDocument
             }
         }
 
+        // Verifies that the entire sentences.meta file contains documents in groups, ordered by location
+        static void VerifyOrder()
+        {
+            string line;
+            string[] met;
+
+            var docs = new HashSet<string>();
+            var lastDoc = string.Empty;
+            var loc = 0;
+
+            using (StreamReader meta = new StreamReader(META))
+            {
+                while ((line = meta.ReadLine()) != null)
+                {
+                    met = line.Split('\t');
+
+                    if (lastDoc != met[2])
+                    {
+                        loc = 0;
+                        lastDoc = met[2];
+                        if (docs.Contains(met[2]))
+                        {
+                            Console.WriteLine(met[2] + " already exists!");
+                            return;
+                        }
+                        else
+                        {
+                            docs.Add(met[2]);
+                        }
+                    }
+                    else
+                    {
+                        int curloc = int.Parse(met[3]);
+                        if (loc > curloc)
+                        {
+                            Console.WriteLine("greater!");
+                            return;
+                        }
+                        else
+                        {
+                            loc = curloc;
+                        }
+                    }
+                }
+            }
+        }
+
         static void WriteDocName(string doc)
         {
             File.WriteAllText(LASTDOC, doc);
@@ -53,6 +100,11 @@ namespace SentenceToDocument
 
         static void Main(string[] args)
         {
+            VerifyOrder();
+            Console.WriteLine("Done");
+            Console.ReadKey();
+            return;
+
             if (REBUILDNAMES)
             {
                 // Build a file that has all of the document names in it
