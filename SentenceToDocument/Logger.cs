@@ -23,6 +23,7 @@ namespace SentenceToDocument
             {
                 outfile.WriteLine(text);
                 Console.Write(text);
+                
             }
         }
     }

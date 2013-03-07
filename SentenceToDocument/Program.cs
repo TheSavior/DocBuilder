@@ -13,19 +13,28 @@ namespace SentenceToDocument
         private const string META = @"C:\Users\Eli\Documents\sentences.meta";
         private const string DOCNAMES = @"C:\Users\Eli\Desktop\output\documentNames.txt";
         private const string SENTENCES = @"C:\Users\Eli\Documents\sentences.text";
-        private const string OUTPUTDIR = @"C:\Users\Eli\Desktop\output\docs\";
+        private const string OUTPUTDIR = @"C:\Users\Eli\Desktop\output\docs2\";
         private const string LASTDOC = @"C:\Users\Eli\Desktop\output\lastdoc.txt";
 
         static float lastPrintedPercent = 0;
+        static DateTime startTime;
+        static int resumeIndex;
 
-        public static void PrintProgress(int currentDoc, int totalDocs)
+        public static void PrintProgressAndUpdate(int currentDoc, int totalDocs)
         {
-            float status = (((float)currentDoc / totalDocs) * 100);
-            if ((status - lastPrintedPercent) > .1)
+            float status = ((float)currentDoc / totalDocs);
+            if ((status - lastPrintedPercent) * 100 > .05)
             {
+                int linesLeft = (totalDocs-currentDoc);
+
+                TimeSpan timeLeft = TimeSpan.FromTicks(DateTime.Now.Subtract(startTime).Ticks * (linesLeft) / (currentDoc - resumeIndex));
+
                 Console.CursorLeft = 0;
-                Logger.Write(String.Format("{0} - %{1}", DateTime.Now.ToLongTimeString(), status));
+                Logger.Write(String.Format("{0} - %{1} - {2} remain - {3}", DateTime.Now.ToLongTimeString(), status.ToString("P"), linesLeft.ToString("N"), DateTime.Now.Add(timeLeft).ToShortTimeString()));
+
                 lastPrintedPercent = status;
+
+                File.WriteAllText(LASTDOC, currentDoc.ToString());
             }
             
         }
@@ -36,12 +45,14 @@ namespace SentenceToDocument
             var totalDocs = getDocCount();
 
             // Where are we starting?
-            var resumeIndex = getResumeIndex();
+            resumeIndex = getResumeIndex();
             var currentDocIndex = 0;
 
             Logger.WriteLine("Starting");
-            PrintProgress(currentDocIndex, totalDocs);
 
+            PrintProgressAndUpdate(currentDocIndex, totalDocs);
+
+            startTime = DateTime.Now;
             using (StreamReader sentences = new StreamReader(SENTENCES))
             {
                 using (StreamReader meta = new StreamReader(META))
@@ -52,8 +63,7 @@ namespace SentenceToDocument
                     string[] met;
                     string sentence;
 
-                    // Start at the 0th document
-                    string prevDoc = meta.ReadLine().Split('\t')[2];
+                    string prevDoc = string.Empty;
 
                     while ((metaStr = meta.ReadLine()) != null)
                     {
@@ -92,10 +102,8 @@ namespace SentenceToDocument
                             prevDoc = met[2];
                             currentDocIndex++;
 
-                            PrintProgress(currentDocIndex, totalDocs);
-
                             // Save to the file we use to resume the name of the doc we just finished
-                            File.WriteAllText(LASTDOC, currentDocIndex.ToString());
+                            PrintProgressAndUpdate(currentDocIndex, totalDocs);                            
 
                             // Clear the sentences
                             lines = new List<string>();
@@ -183,23 +191,6 @@ namespace SentenceToDocument
             }
 
             return index;
-        }
-
-        public static string getDocAtIndex(int index)
-        {
-            /*
-            // This increments docIndex and sets lastDoc to be where we need to start
-
-            using (StreamReader docNames = new StreamReader(DOCNAMES))
-            {
-                // Keep moving ahead until we reach where we were at
-                while ((docNames.ReadLine() != lastDoc))
-                {
-                    currentDocIndex++;
-                }
-            }
-             */
-            return string.Empty;
         }
 
         static void VerifyDocumentNames()
