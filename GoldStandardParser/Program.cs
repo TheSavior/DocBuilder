@@ -12,12 +12,21 @@ namespace GoldStandardParser
     class Program
     {
         private const string GOLD_XML = @"C:\Users\Eli\Documents\tac_2010_kbp_evaluation_entity_linking_queries.xml";
+        private const string GOLD_TAB = @"C:\Users\Eli\Documents\tac_2010_kbp_evaluation_entity_linking_query_types.tab";
         private const string OUTPUT = @"C:\Users\Eli\Documents\doc_gold.txt";
 
         static void Main(string[] args)
         {
             int docs = 0;
             int entities = 0;
+
+            // Dictionary of QueryId => EntityId
+            var tabs = 
+                (from line in File.ReadLines(GOLD_TAB)
+                let pieces = line.Split('\t')
+                select new {QueryId = pieces[0], EntityId = pieces[1]})
+                .ToDictionary(item => item.QueryId, item => item.EntityId);
+
             using (XmlReader reader = XmlReader.Create(new StreamReader(GOLD_XML)))
             {
                 /* Our document looks like:
@@ -45,9 +54,9 @@ namespace GoldStandardParser
                 var items =
                     from el in root.Elements("query")
                     let docid = (string)el.Element("docid")
-                    let name = (string)el.Element("name")
+                    let entityId = tabs[((string)el.Attribute("id"))]
                     where !docid.StartsWith("eng-")
-                    group name by docid into ents
+                    group entityId by docid into ents
                     orderby ents.Key
                     select new { Document = ents.Key, Entities = ents};
 
